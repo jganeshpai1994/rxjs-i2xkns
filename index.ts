@@ -1,80 +1,66 @@
-import {
-  combineLatest,
-  forkJoin,
-  from,
-  fromEvent,
-  interval,
-  Observable,
-  of,
-  timer,
-} from 'rxjs';
-import { ajax } from 'rxjs/ajax';
-console.log('Hi');
+// pipeable operator
 
-setTimeout(() => console.log('Timed at data'), 4000);
+import { EMPTY, fromEvent, Observable, of, Subscription } from 'rxjs';
+import { catchError, debounceTime, filter, map, tap } from 'rxjs/operators';
 
-setTimeout(() => console.log('Timed at data 2'), 2000);
-
-// for(let i=0;i<10;i++)
-// {
-//   console.log('Data')
-// }
-
-// Creation Function
-// of function
-// of('Alice','Bob','Green').subscribe({
-//   next: value=> console.log(value),
-//   complete: ()=> console.log('Completed')
-// })
-
-// const name$ = new Observable<string>((subscriber)=>{
-//   subscriber.next('Alice');
-//   subscriber.next('Bob');
-//   subscriber.next('Green');
-//   subscriber.complete();
-// });
-
-// name$.subscribe({
-//   next: (value)=>console.log(value),
-//   complete: ()=> console.log('Completed')
-// })
-
-//from
-// from(['D','G',"M"]).subscribe(value=> console.log('From',value));
-
-// from(new Promise((resolve,reject)=>{
-//   resolve('Resolved')
-// })).subscribe((x)=> console.log(x))
-
-//fromEvent
-// const triggerButton = document.querySelector('button#data');
-
-// const buttonObservable$ = fromEvent(triggerButton,'click');
-
-// buttonObservable$.subscribe((value)=>{
-//   console.log(value.type);
-// });
-
-// timer(5000).subscribe(x=>console.log(x))
-
-// interval(200)
-
-//forkJoin
-const observable1$ = ajax('https://random-data-api.com/api/name/random_name');
-
-const observable2$ = ajax(
-  'https://random-data-api.com/api/nation/random_nation'
-);
-
-// forkJoin([observable1$, observable2$]).subscribe({
-//   next: (value) => value.forEach((x, i) => console.log(x.response)),
-//   complete: () => console.log('Completed'),
-// });
-
-//combineLatest
-combineLatest([observable1$, observable2$]).subscribe({
-  next: (value) => value.forEach((x, i) => console.log(x.response)),
-  complete: () => console.log('Completed'),
+const filterObservable$ = new Observable<string>((subscribe) => {
+  subscribe.next('Sports');
+  subscribe.next('Business');
+  setTimeout(() => subscribe.next('Business'), 3000);
+  setTimeout(() => subscribe.next('Sports'), 5000);
 });
 
-forkJoin([of('ABC'), timer(1000)]).subscribe((value)=> console.log(value))
+// filter
+const sportsFeedObservable$ = filterObservable$.pipe(
+  filter((item) => item === 'Sports')
+);
+
+sportsFeedObservable$.subscribe((value) => console.log(value));
+
+// map
+// const mapObservable$ = new Observable<Number>((subscribe) => {
+//   for (let i = 0; i < 5; i++) {
+//     setTimeout(() => subscribe.next(i), i * 1000);
+//   }
+// });
+
+// const mapFeedObservable$ = mapObservable$.pipe(map((item) => item));
+// mapFeedObservable$.subscribe((value) => console.log(value));
+
+// tap
+// of(1,3,5,6,7).pipe(
+//   tap(value => console.log('Spy:',value)),
+//   map((item)=> item * 2),
+//   filter((item)=> item > 5)
+// ).subscribe(value=> console.log('Output:',value))
+
+//debounceTime
+// used for sliders in html
+const slider = document.querySelector('input#slider');
+fromEvent(slider, 'input')
+  .pipe(
+    debounceTime(2000),
+    map((event) => event.target['value'])
+  )
+  .subscribe((value) => console.log(value));
+
+//catchError
+const failingHttpRequest$ = new Observable((subscriber) => {
+  setTimeout(() => {
+    subscriber.error(new Error('Timeout'));
+  }, 3000);
+  setTimeout(() => {
+    subscriber.next('Data');
+  }, 4000);
+});
+
+console.log('App Started');
+
+//EMPTY internally handles the error and sends complete notification
+failingHttpRequest$
+  //.pipe(catchError((error) => of('Fallback Value')))
+  .pipe(catchError(() => EMPTY))
+  .subscribe({
+    next: (value) => console.log(value),
+    complete: () => console.log('Completed'),
+  });
